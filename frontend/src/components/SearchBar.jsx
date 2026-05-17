@@ -25,7 +25,6 @@ export default function SearchBar({ onSearch, loading }) {
 
   return (
     <div style={styles.wrap}>
-      {/* Başlık */}
       <div style={styles.hero}>
         <div style={styles.badge}>Demo</div>
         <h1 style={styles.title}>
@@ -38,7 +37,6 @@ export default function SearchBar({ onSearch, loading }) {
         </p>
       </div>
 
-      {/* Arama kutusu */}
       <div style={styles.searchWrap}>
         <div style={styles.inputRow}>
           <span style={styles.searchIcon}>
@@ -72,7 +70,6 @@ export default function SearchBar({ onSearch, loading }) {
           </button>
         </div>
 
-        {/* Profil seçici */}
         <div style={styles.profilRow}>
           <span style={styles.profilLabel}>Profil:</span>
           {PROFILLER.map(p => (
@@ -87,7 +84,6 @@ export default function SearchBar({ onSearch, loading }) {
         </div>
       </div>
 
-      {/* Örnek sorgular */}
       <div style={styles.ornekRow}>
         <span style={styles.ornekLabel}>Örnek:</span>
         {ORNEKLER.map(o => (
@@ -113,7 +109,6 @@ const styles = {
   },
   hero: {
     marginBottom: 40,
-    animation: 'fadeUp 0.6s ease both',
   },
   badge: {
     display: 'inline-block',
@@ -126,15 +121,12 @@ const styles = {
     letterSpacing: '0.1em',
     color: 'var(--accent)',
     marginBottom: 20,
-    fontFamily: 'var(--font-display)',
     textTransform: 'uppercase',
   },
   title: {
-    fontFamily: 'var(--font-display)',
     fontSize: 'clamp(40px, 7vw, 72px)',
     fontWeight: 800,
     lineHeight: 1.05,
-    letterSpacing: '-0.03em',
     color: 'var(--text)',
     marginBottom: 20,
   },
@@ -145,16 +137,14 @@ const styles = {
     fontSize: 16,
     color: 'var(--text2)',
     lineHeight: 1.7,
-    fontWeight: 300,
   },
   searchWrap: {
     background: 'var(--bg2)',
     border: '1px solid var(--border2)',
-    borderRadius: var_r2,
+    borderRadius: 20,
     padding: '6px 6px 12px',
     marginBottom: 16,
-    animation: 'fadeUp 0.6s 0.1s ease both',
-    boxShadow: '0 0 0 1px rgba(110,231,183,0.06), var(--shadow)',
+    boxShadow: 'var(--shadow)',
   },
   inputRow: {
     display: 'flex',
@@ -174,7 +164,6 @@ const styles = {
     outline: 'none',
     color: 'var(--text)',
     fontSize: 16,
-    fontFamily: 'var(--font-body)',
     padding: '10px 0',
   },
   btn: {
@@ -188,10 +177,7 @@ const styles = {
     padding: '12px 24px',
     fontSize: 14,
     fontWeight: 700,
-    fontFamily: 'var(--font-display)',
     cursor: 'pointer',
-    letterSpacing: '0.02em',
-    transition: 'opacity 0.2s, transform 0.15s',
     flexShrink: 0,
     whiteSpace: 'nowrap',
   },
@@ -225,8 +211,6 @@ const styles = {
     color: 'var(--text2)',
     fontSize: 13,
     cursor: 'pointer',
-    transition: 'all 0.15s',
-    fontFamily: 'var(--font-body)',
   },
   profilChipActive: {
     background: 'var(--accent-dim)',
@@ -239,7 +223,6 @@ const styles = {
     justifyContent: 'center',
     gap: 8,
     flexWrap: 'wrap',
-    animation: 'fadeUp 0.6s 0.2s ease both',
   },
   ornekLabel: {
     fontSize: 12,
@@ -253,10 +236,5 @@ const styles = {
     color: 'var(--text2)',
     fontSize: 13,
     cursor: 'pointer',
-    transition: 'all 0.2s',
-    fontFamily: 'var(--font-body)',
   },
 };
-
-// CSS var trick için
-const var_r2 = 'var(--r2)';
