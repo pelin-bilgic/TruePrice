@@ -1,11 +1,17 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import os
+import json
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Gemini'ye bağlan
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 app = FastAPI(
     title="TruePrice AI",
@@ -16,7 +22,7 @@ app = FastAPI(
 # CORS — React frontend'in backend'e istek atabilmesi için
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Deploy'da Vercel URL'inle değiştir
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -44,31 +50,89 @@ def root():
 @app.post("/search")
 def search(req: SearchRequest):
     """
-    Kullanıcının doğal dil sorgusunu alır, mock veri üzerinden
-    eşleşen ürünleri puana göre sıralı döndürür.
-    Şu an: coming soon — Görev 5 ve 6'da tamamlanacak.
+    Kullanıcının doğal dil sorgusunu Gemini ile analiz eder,
+    arama kriterlerini çıkarır.
     """
-    return {
-        "status": "coming_soon",
-        "sorgu": req.sorgu,
-        "profil": req.profil,
-        "sonuclar": []
-    }
+    prompt = f"""
+    Kullanıcı şunu yazdı: "{req.sorgu}"
+    Kullanıcı profili: "{req.profil or 'belirtilmedi'}"
+    
+    Bu metinden alışveriş kriterlerini çıkar ve SADECE JSON döndür:
+    {{
+        "kategori": "laptop veya telefon veya tablet",
+        "butce_max": sayı (TL cinsinden, belirtilmediyse null),
+        "ozellikler": ["özellik1", "özellik2"],
+        "profil": "ogrenci veya yazilimci veya oyuncu veya genel"
+    }}
+    
+    Başka hiçbir şey yazma, sadece JSON.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        temiz = response.text.strip().replace("```json", "").replace("```", "")
+        kriterler = json.loads(temiz)
+        return {
+            "status": "ok",
+            "sorgu": req.sorgu,
+            "kriterler": kriterler,
+            "sonuclar": []  # Kisi 2'nin mock verisi gelince dolacak
+        }
+    except Exception as e:
+        return {"status": "hata", "mesaj": str(e)}
 
 
 @app.post("/trueprice")
 def trueprice(req: TruePriceRequest):
     """
-    Ürün ID veya {fiyat, kategori} alır.
-    3 yıllık toplam maliyet hesabını ve breakdown'ını döndürür.
-    Şu an: coming soon — Görev 7 ve 8'de tamamlanacak.
+    Ürün fiyatı ve kategorisine göre 3 yıllık gerçek maliyeti hesaplar.
     """
+    if not req.fiyat or not req.kategori:
+        return {"status": "hata", "mesaj": "fiyat ve kategori gerekli"}
+
+    # Kategori bazlı katsayılar
+    katsayilar = {
+        "laptop": {
+            "bakim": 0.08,
+            "aksesuar": 0.12,
+            "enerji": 0.056,
+            "deger_kaybi": 0.35
+        },
+        "telefon": {
+            "bakim": 0.10,
+            "aksesuar": 0.15,
+            "enerji": 0.01,
+            "deger_kaybi": 0.45
+        },
+        "tablet": {
+            "bakim": 0.07,
+            "aksesuar": 0.10,
+            "enerji": 0.02,
+            "deger_kaybi": 0.40
+        }
+    }
+
+    k = katsayilar.get(req.kategori.lower(), katsayilar["laptop"])
+    fiyat = req.fiyat
+
+    bakim = round(fiyat * k["bakim"] * 3)
+    aksesuar = round(fiyat * k["aksesuar"])
+    enerji = round(fiyat * k["enerji"] * 3)
+    deger_kaybi = round(fiyat * k["deger_kaybi"])
+    trueprice_toplam = round(fiyat + bakim + aksesuar + enerji + deger_kaybi)
+
     return {
-        "status": "coming_soon",
+        "status": "ok",
         "urun_id": req.urun_id,
-        "etiket_fiyat": req.fiyat,
-        "trueprice": None,
-        "breakdown": {}
+        "etiket_fiyat": fiyat,
+        "trueprice": trueprice_toplam,
+        "fark": trueprice_toplam - fiyat,
+        "breakdown": {
+            "bakim": bakim,
+            "aksesuar": aksesuar,
+            "enerji": enerji,
+            "deger_kaybi": deger_kaybi
+        }
     }
 
 
