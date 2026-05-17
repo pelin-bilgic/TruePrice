@@ -31,13 +31,13 @@ app.add_middleware(
 # ── Request modelleri ──────────────────────────────────────────────
 
 class SearchRequest(BaseModel):
-    sorgu: str                        # "yazılım için hafif laptop 40k altı"
-    profil: Optional[str] = None      # "ogrenci" | "yazilimci" | "oyuncu"
+    sorgu: str
+    profil: Optional[str] = None
 
 class TruePriceRequest(BaseModel):
     urun_id: Optional[str] = None
     fiyat: Optional[float] = None
-    kategori: Optional[str] = None    # "laptop" | "telefon" | "tablet"
+    kategori: Optional[str] = None
 
 
 # ── Endpoint'ler ───────────────────────────────────────────────────
@@ -49,13 +49,13 @@ def root():
 
 @app.post("/search")
 def search(req: SearchRequest):
-    """
-    Kullanıcının doğal dil sorgusunu Gemini ile analiz eder,
-    arama kriterlerini çıkarır.
-    """
+    # Mock veriyi oku
+    with open("mock_data.json", "r", encoding="utf-8") as f:
+        urunler = json.load(f)
+
     prompt = f"""
     Kullanıcı şunu yazdı: "{req.sorgu}"
-    Kullanıcı profili: "{req.profil or 'belirtilmedi'}"
+    Kullanıcı profili: "{req.profil or 'genel'}"
     
     Bu metinden alışveriş kriterlerini çıkar ve SADECE JSON döndür:
     {{
@@ -72,25 +72,37 @@ def search(req: SearchRequest):
         response = model.generate_content(prompt)
         temiz = response.text.strip().replace("```json", "").replace("```", "")
         kriterler = json.loads(temiz)
+
+        kategori = kriterler.get("kategori", "laptop")
+        butce = kriterler.get("butce_max")
+        profil = kriterler.get("profil", "genel")
+
+        sonuclar = [u for u in urunler if u["kategori"] == kategori]
+
+        if butce:
+            sonuclar = [u for u in sonuclar if u["fiyat"] <= butce]
+
+        if profil in ["ogrenci", "yazilimci", "oyuncu"]:
+            sonuclar = sorted(sonuclar, key=lambda u: u["profilSkor"].get(profil, 0), reverse=True)
+        else:
+            sonuclar = sorted(sonuclar, key=lambda u: u["puan"], reverse=True)
+
         return {
             "status": "ok",
             "sorgu": req.sorgu,
             "kriterler": kriterler,
-            "sonuclar": []  # Kisi 2'nin mock verisi gelince dolacak
+            "sonuclar": sonuclar
         }
+
     except Exception as e:
         return {"status": "hata", "mesaj": str(e)}
 
 
 @app.post("/trueprice")
 def trueprice(req: TruePriceRequest):
-    """
-    Ürün fiyatı ve kategorisine göre 3 yıllık gerçek maliyeti hesaplar.
-    """
     if not req.fiyat or not req.kategori:
         return {"status": "hata", "mesaj": "fiyat ve kategori gerekli"}
 
-    # Kategori bazlı katsayılar
     katsayilar = {
         "laptop": {
             "bakim": 0.08,
@@ -138,10 +150,6 @@ def trueprice(req: TruePriceRequest):
 
 @app.get("/compare")
 def compare(urun_id_1: str, urun_id_2: str):
-    """
-    İki ürünü TruePrice bazında karşılaştırır.
-    Şu an: coming soon.
-    """
     return {
         "status": "coming_soon",
         "urun_1": urun_id_1,
